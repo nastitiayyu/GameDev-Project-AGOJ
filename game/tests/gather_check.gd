@@ -9,6 +9,7 @@ var _pending_calls := 0
 
 func _ready() -> void:
 	await get_tree().process_frame
+	DayCycle.enabled = false
 	_board = MAIN_SCENE.instantiate()
 	add_child(_board)
 	await get_tree().process_frame

@@ -1,15 +1,17 @@
 [gd_resource type="Resource" load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/core/card_types/item_card.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/core/card_types/tool_card.gd" id="1_script"]
 
 [resource]
 script = ExtResource("1_script")
 id = "item_oxygen_tank"
 display_name = "Oxygen Tank"
-category = 2
+category = 4
 rarity = 0
-description = "Tabung oksigen. Dari 2x Water, atau loot memecah Space Debris."
-stack_max = 99
+description = "Use on a unit: adds 25 O2 to the ship's stock. Single use."
+stack_max = 0
 sell_value = 3
-item_type = 1
-food_restore = 0
+effect_type = 0
+effect_value = 25.0
+is_consumable = true
+tank_duration_days = 0

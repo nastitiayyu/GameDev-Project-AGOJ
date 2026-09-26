@@ -1,0 +1,19 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/card_types/package_card.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "pkg_emergency_sos"
+display_name = "Emergency SOS"
+category = 7
+rarity = 2
+description = "Emergency package: supply materials ASAP. Instant reward when complete."
+stack_max = 0
+sell_value = 0
+destination_sector_id = "sector_debris_field"
+required_items = Array[Dictionary]([{"item_id": "item_food", "qty": 3}, {"item_id": "item_water", "qty": 2}])
+reward_credits = 60
+reward_rep = 15
+deadline_days = 5
+tier = 2

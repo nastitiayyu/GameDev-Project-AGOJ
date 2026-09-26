@@ -21,11 +21,6 @@ var unit_state: int = Enums.UnitState.IDLE
 var assigned_building: Card = null    # Unit → Building tempat WORKING
 var equipped_tool_ids: Array[String] = []
 
-# A1.2 — O2 tether
-var is_tethered := false
-var tether_status: int = Enums.TetherStatus.NORMAL
-var tank_days_left := 0
-
 # A7 — building runtime
 var is_built := false                 # sudah dibayar build_cost & terpasang
 var is_off := false                   # auto-shutdown kekurangan power
@@ -49,6 +44,11 @@ var _pre_drag_position := Vector2.ZERO
 @onready var _progress_track: ColorRect = %ProgressTrack
 @onready var _progress_fill: ColorRect = %ProgressFill
 @onready var _frame_rect: TextureRect = %FrameTexture
+@onready var _art_rect: TextureRect = %ArtTexture
+
+# Art per kartu: assets/cards/art_<card_id>.png (opsional).
+# Kalau belum ada, kotak warna placeholder tetap tampil.
+static var _art_cache: Dictionary = {}
 
 # Frame kartu per zona (biru = kapal, coklat = angkasa). File PNG opsional:
 # kalau belum ada, kartu tampil placeholder lama. Taruh di:
@@ -62,8 +62,28 @@ static var _fallback_style: StyleBoxFlat
 
 func _ready() -> void:
 	add_to_group(&"cards")
+	_apply_bold_fonts()
 	refresh_zone_frame()
 	_update_visuals()
+
+# Bold: FontVariation embolden di atas fallback font (game_font).
+static var _bold_font: Font = null
+
+static func _bold() -> Font:
+	var base := ThemeDB.fallback_font
+	var fv := _bold_font as FontVariation
+	if fv == null or fv.base_font != base:
+		fv = FontVariation.new()
+		fv.base_font = base
+		fv.variation_embolden = 0.8
+		_bold_font = fv
+	return _bold_font
+
+func _apply_bold_fonts() -> void:
+	var f := _bold()
+	for lab in [_title_label, _count_label, _category_label, _status_label]:
+		if lab != null:
+			(lab as Label).add_theme_font_override("font", f)
 
 func setup_card(data: CardData, count := 1, built := false) -> void:
 	card_data = data
@@ -100,7 +120,7 @@ func _update_visuals() -> void:
 	if card_data == null:
 		return
 	_title_label.text = card_data.display_name
-	_color_rect.color = card_data.get_placeholder_color()
+	_refresh_art()
 	_category_label.text = _category_short()
 	_count_label.text = "x%d" % stack_count if stack_count > 1 else ""
 	_count_label.visible = stack_count > 1
@@ -117,17 +137,15 @@ func _update_status_visual() -> void:
 			Enums.UnitState.TRAVELING:
 				_status_label.text = "TRAVELING"
 				return
-	if tether_status == Enums.TetherStatus.O2_CUT:
-		_status_label.text = "O2 CUT!"
-		return
-	if is_tethered:
-		_status_label.text = "TETHERED"
-		return
 	if assigned_node != null or assigned_building != null:
 		_status_label.text = "WORKING"
 		return
 	if is_package():
 		_status_label.text = _package_progress_text()
+		if _is_deadline_urgent():
+			_status_label.add_theme_color_override("font_color", Color(0.9, 0.15, 0.1))
+		else:
+			_status_label.remove_theme_color_override("font_color")
 		return
 	if is_node() and node_durability_left >= 0:
 		_status_label.text = "DUR %d" % node_durability_left
@@ -143,6 +161,76 @@ func _update_status_visual() -> void:
 
 func refresh() -> void:
 	_update_visuals()
+
+# Tampilkan art PNG kalau ada, kalau tidak pakai kotak warna kategori.
+# Mode art: gambar full-bleed seukuran kartu, nama pindah ke bawah,
+# label kategori disembunyikan (status/progress tetap di tempatnya).
+func _refresh_art() -> void:
+	if _art_rect == null or _color_rect == null:
+		return
+	var tex := card_art()
+	if tex == null:
+		_art_rect.visible = false
+		_color_rect.visible = true
+		_color_rect.color = card_data.get_placeholder_color()
+		_title_label.offset_top = 51.0
+		_title_label.offset_bottom = 78.0
+		_category_label.visible = true
+		_status_label.offset_top = 96.0
+		_status_label.offset_bottom = 113.0
+		return
+	_art_rect.texture = tex
+	_art_rect.offset_left = -6.0
+	_art_rect.offset_top = -6.0
+	_art_rect.offset_right = 96.0
+	_art_rect.offset_bottom = 99.0
+	_art_rect.visible = true
+	_color_rect.visible = false
+	_title_label.offset_top = 100.0
+	_title_label.offset_bottom = 126.0
+	_category_label.visible = false
+	_status_label.offset_top = 80.0
+	_status_label.offset_bottom = 93.0
+
+# Art kartu (atau null kalau belum ada file-nya). Dipakai inspect overlay.
+# Urutan: art spesifik per kartu → art bersama per jenis → null (placeholder).
+# File jenis (8, di assets/cards/): art_unit, art_node, art_building,
+# art_tool, art_material (mentah+olahan+loot), art_food, art_package, art_event.
+func card_art() -> Texture2D:
+	if card_data == null:
+		return null
+	if not _art_cache.has(card_data.id):
+		_art_cache[card_data.id] = _find_art()
+	return _art_cache[card_data.id]
+
+func _find_art() -> Texture2D:
+	var specific := "res://assets/cards/art_%s.png" % card_data.id
+	if ResourceLoader.exists(specific):
+		return load(specific)
+	var shared := "res://assets/cards/art_%s.png" % _art_group_name()
+	if shared != specific and ResourceLoader.exists(shared):
+		return load(shared)
+	return null
+
+func _art_group_name() -> String:
+	match card_data.category:
+		Enums.CardCategory.UNIT:
+			return "unit"
+		Enums.CardCategory.NODE:
+			return "node"
+		Enums.CardCategory.BUILDING:
+			return "building"
+		Enums.CardCategory.TOOL:
+			return "tool"
+		Enums.CardCategory.ITEM_RAW, Enums.CardCategory.ITEM_PROCESSED, Enums.CardCategory.CURRENCY_LOOT:
+			return "material"
+		Enums.CardCategory.ITEM_FOOD:
+			return "food"
+		Enums.CardCategory.PACKAGE:
+			return "package"
+		Enums.CardCategory.EVENT:
+			return "event"
+	return ""
 
 # Pilih frame biru/coklat sesuai zona posisi kartu saat ini.
 func refresh_zone_frame() -> void:
@@ -237,7 +325,7 @@ func set_unit_state(state: int) -> void:
 	unit_state = state
 	_update_status_visual()
 
-# ---------- A5: tool equip ----------
+# ---------- A5: tool equip (1 tool per unit) ----------
 
 func equip_tool(tool_id: String) -> void:
 	if equipped_tool_ids.has(tool_id):
@@ -245,18 +333,24 @@ func equip_tool(tool_id: String) -> void:
 	equipped_tool_ids.append(tool_id)
 	_update_status_visual()
 
+func unequip_tool(tool_id: String) -> void:
+	equipped_tool_ids.erase(tool_id)
+	_update_status_visual()
+
+# Klik kanan unit: lepas tool yang dipakai (kartu kembali ke board).
+func _unequip_last() -> void:
+	if equipped_tool_ids.is_empty():
+		return
+	var board := get_tree().get_first_node_in_group(&"board") as Board
+	if board == null:
+		return
+	var tool_id: String = equipped_tool_ids.back()
+	unequip_tool(tool_id)
+	board.spawn_card_at(tool_id, global_position + size * 0.5 + Vector2(70, 0))
+	board._show_toast("Removed", global_position, Color(0.7, 0.95, 1))
+
 func has_equipped_tool(tool_id: String) -> bool:
 	return equipped_tool_ids.has(tool_id)
-
-# ---------- A1.2: tether ----------
-
-func set_tethered(tethered: bool) -> void:
-	is_tethered = tethered
-	_update_status_visual()
-
-func set_tether_status(status: int) -> void:
-	tether_status = status
-	_update_status_visual()
 
 # ---------- A8: package assembly ----------
 
@@ -286,9 +380,32 @@ func _package_progress_text() -> String:
 		done += mini(qty, int(assembled_items.get(item_id, 0)))
 	if total == 0:
 		return ""
-	if is_package_complete():
-		return "READY"
-	return "%d/%d" % [done, total]
+	var base := "READY" if is_package_complete() else "%d/%d" % [done, total]
+	if has_meta("emergency"):
+		return "SOS %ds %s" % [maxi(0, int(get_meta("time_left", 0.0))), base]
+	if get_card_id().begins_with("pkg_quest_"):
+		return base  # quest tidak kedaluwarsa
+	return "%s %s" % [base, _deadline_text()]
+
+# Sisa deadline kontrak ("8d" / "2.4d"). Diisi board._tick_deadlines per tick;
+# fallback ke data mentah sebelum tick pertama jalan.
+func _deadline_text() -> String:
+	var pkg := card_data as PackageCardData
+	var full := float(pkg.deadline_days) if pkg != null else 0.0
+	var left := float(get_meta("deadline_left", full))
+	if left >= 3.0:
+		return "%dd" % int(ceil(left))
+	return "%.1fd" % maxf(0.0, left)
+
+# Deadline < 1 hari: status merah (di-refresh tiap tick via refresh()).
+func _is_deadline_urgent() -> bool:
+	if not is_package() or has_meta("emergency"):
+		return false
+	if get_card_id().begins_with("pkg_quest_"):
+		return false
+	var pkg := card_data as PackageCardData
+	var full := float(pkg.deadline_days) if pkg != null else 0.0
+	return float(get_meta("deadline_left", full)) < 1.0
 
 func set_stack_count(n: int) -> void:
 	stack_count = n
@@ -330,6 +447,13 @@ func is_draggable() -> bool:
 	return true
 
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT \
+			and event.pressed:
+		if is_unit():
+			_unequip_last()
+			return
+		_split_stack()
+		return
 	if not is_draggable():
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -344,6 +468,10 @@ func _process(_delta: float) -> void:
 	global_position = get_global_mouse_position() - _drag_offset
 	if not _was_dragging and global_position.distance_to(_press_position) > DRAG_THRESHOLD:
 		_was_dragging = true
+	if _was_dragging:
+		var preview_board := get_tree().get_first_node_in_group(&"board") as Board
+		if preview_board != null:
+			preview_board.update_combine_preview(self)
 
 func _begin_drag() -> void:
 	_dragging = true
@@ -352,6 +480,7 @@ func _begin_drag() -> void:
 	_pre_drag_position = global_position
 	_drag_offset = _press_position - global_position
 	z_index = DRAG_Z_INDEX
+	Sfx.play("pickup")
 	pivot_offset = size * 0.5
 	scale = Vector2(DRAG_SCALE, DRAG_SCALE)
 
@@ -362,6 +491,9 @@ func _end_drag() -> void:
 	z_index = 0
 	pivot_offset = Vector2.ZERO
 	scale = Vector2.ONE
+	var preview_board := get_tree().get_first_node_in_group(&"board") as Board
+	if preview_board != null:
+		preview_board.hide_combine_preview()
 	if _was_dragging:
 		var board: Node = get_tree().get_first_node_in_group(&"board")
 		if board == null or not board.validate_drop(self):
@@ -369,6 +501,7 @@ func _end_drag() -> void:
 			return
 		if _try_merge_stack():
 			return
+		Sfx.play("drop")
 		dropped.emit(self, get_global_mouse_position())
 	else:
 		clicked.emit(self)
@@ -378,6 +511,22 @@ func _revert_drop() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "self_modulate", Color(1, 0.35, 0.35, 1), 0.12)
 	tween.tween_property(self, "self_modulate", Color.WHITE, 0.3)
+
+# Klik kanan: belah stack jadi dua (setengah dibulatkan ke bawah pindah ke
+# kartu baru di sebelahnya, sisa minimal 1). Bukan item / isi 1: abaikan.
+func _split_stack() -> void:
+	if not _is_stackable_item() or stack_count <= 1:
+		return
+	var board := get_tree().get_first_node_in_group(&"board") as Board
+	if board == null:
+		return
+	var moved: int = maxi(1, stack_count / 2)
+	if moved >= stack_count:
+		return
+	set_stack_count(stack_count - moved)
+	var top_left := global_position + Vector2(size.x + 16.0, 16.0)
+	board.spawn_card_at(card_data.id, top_left + size * 0.5, moved)
+	Sfx.play("unstack")
 
 func _is_stackable_item() -> bool:
 	return card_data != null \
@@ -416,5 +565,6 @@ func _try_merge_stack() -> bool:
 		else:
 			_update_visuals()
 			global_position = other.global_position + Vector2(12, 12)
+		Sfx.play("stack")
 		return true
 	return false

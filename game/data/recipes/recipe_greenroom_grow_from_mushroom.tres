@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_greenroom_grow_from_mushroom"
-display_name = "Green Room: Tumbuhkan Mushroom (dari Mushroom)"
+display_name = "Green Room: Grow Mushroom (from Mushroom)"
 inputs = Array[Dictionary]([{"item_id": "item_water", "qty": 1}, {"item_id": "item_mushroom", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1

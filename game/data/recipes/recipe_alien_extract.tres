@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_alien_extract"
-display_name = "Ekstrak Alien"
+display_name = "Process Alien Extract"
 inputs = Array[Dictionary]([{"item_id": "item_alien_flora", "qty": 1}])
 required_building_id = "building_science_lab"
 required_unit_role = 2

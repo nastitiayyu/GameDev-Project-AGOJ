@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_circuit_board"
-display_name = "Rakit Circuit Board"
+display_name = "Craft Circuit Board"
 inputs = Array[Dictionary]([{"item_id": "item_scrap_metal", "qty": 2}, {"item_id": "item_crystal_ore", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1

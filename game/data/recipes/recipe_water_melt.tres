@@ -5,10 +5,11 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_water_melt"
-display_name = "Mencairkan Es"
-inputs = Array[Dictionary]([{"item_id": "item_ice_chunk", "qty": 1}, {"item_id": "tool_heat_source", "qty": 1}])
+display_name = "Furnace: Melt Ice"
+inputs = Array[Dictionary]([{"item_id": "item_ice_chunk", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1
 output_id = "item_water"
 output_qty = 1
 duration_days = 0
+structure_target_ids = Array[String](["building_furnace", "unit_little_furnace"])

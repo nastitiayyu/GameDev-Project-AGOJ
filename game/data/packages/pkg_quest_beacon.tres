@@ -1,0 +1,19 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/card_types/package_card.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "pkg_quest_beacon"
+display_name = "Beacon Parts"
+category = 7
+rarity = 3
+description = "QUEST 1/2: Beacon spare parts. Complete it to unlock the next quest."
+stack_max = 0
+sell_value = 0
+destination_sector_id = "sector_debris_field"
+required_items = Array[Dictionary]([{"item_id": "item_component", "qty": 3}, {"item_id": "item_iron", "qty": 4}, {"item_id": "item_water", "qty": 2}])
+reward_credits = 80
+reward_rep = 10
+deadline_days = 8
+tier = 3

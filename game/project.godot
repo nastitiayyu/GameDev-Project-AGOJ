@@ -24,6 +24,7 @@ DayCycle="*res://scripts/systems/day_cycle_manager.gd"
 Economy="*res://scripts/systems/economy_manager.gd"
 Packages="*res://scripts/systems/package_manager.gd"
 Events="*res://scripts/systems/event_manager.gd"
+Sfx="*res://scripts/systems/sfx.gd"
 
 [display]
 

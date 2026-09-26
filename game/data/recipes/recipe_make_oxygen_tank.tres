@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_make_oxygen_tank"
-display_name = "Rakit Oxygen Tank"
-inputs = Array[Dictionary]([{"item_id": "item_water", "qty": 1}, {"item_id": "item_water", "qty": 1}])
+display_name = "Craft Oxygen Tank"
+inputs = Array[Dictionary]([{"item_id": "item_water", "qty": 1}, {"item_id": "item_ice_chunk", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1
 output_id = "item_oxygen_tank"

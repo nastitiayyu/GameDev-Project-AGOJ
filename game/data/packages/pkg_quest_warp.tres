@@ -1,0 +1,19 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/card_types/package_card.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "pkg_quest_warp"
+display_name = "Warp Core"
+category = 7
+rarity = 3
+description = "QUEST 2/2 FINAL: The ship's warp core. Deliver it to finish the game!"
+stack_max = 0
+sell_value = 0
+destination_sector_id = "sector_asteroid_belt"
+required_items = Array[Dictionary]([{"item_id": "item_fuel_cell", "qty": 2}, {"item_id": "item_circuit_board", "qty": 2}, {"item_id": "item_alien_extract", "qty": 1}])
+reward_credits = 200
+reward_rep = 30
+deadline_days = 10
+tier = 3

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_fuel_cell"
-display_name = "Olah Fuel Cell"
+display_name = "Process Fuel Cell"
 inputs = Array[Dictionary]([{"item_id": "item_space_gas", "qty": 2}])
 required_building_id = "building_fuel_refinery"
 required_unit_role = -1

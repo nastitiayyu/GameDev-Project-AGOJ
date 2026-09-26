@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_feast_meal"
-display_name = "Masak Feast Meal"
+display_name = "Cook Feast Meal"
 inputs = Array[Dictionary]([{"item_id": "item_hydro_veggie", "qty": 3}, {"item_id": "item_protein_paste", "qty": 1}])
 required_building_id = "building_hydroponics_bay"
 required_unit_role = -1

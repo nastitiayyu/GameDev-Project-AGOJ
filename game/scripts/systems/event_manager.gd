@@ -6,13 +6,15 @@ const LOOT_ITEM_ID := "item_meteorite_fragment"
 
 var enabled := true  # false = matikan roll acak (untuk test deterministik)
 
-# A9: P = clamp(0.15 + 0.01×day, 0.15, 0.6), pick berbobot spawn_weight
-func maybe_spawn_event() -> void:
+# A9: P = clamp(0.15 + 0.01×day, 0.15, 0.6), pick berbobot spawn_weight.
+# day_frac = fraksi hari yang lewat (1.0 = sehari penuh, legacy end_day).
+func maybe_spawn_event(day_frac: float = 1.0) -> void:
 	if not enabled or GameState.is_game_over:
 		return
 	var day := GameState.day
 	var chance := clampf(0.15 + 0.01 * day, 0.15, 0.6)
-	if randf() > chance:
+	var roll_p: float = 1.0 - pow(1.0 - chance, day_frac)
+	if randf() > roll_p:
 		return
 	var events := CardDB.get_events()
 	if events.is_empty():
@@ -42,12 +44,40 @@ func spawn_event(board: Board, event_id: String) -> void:
 	if event_data == null:
 		return
 	if event_data.effect_type == Enums.EventEffect.PLAYER_CHOICE:
-		# Kartu event di board; klik → HUD pilihan (A9 PLAYER_CHOICE)
-		board.spawn_card_at(event_id, board.random_free_spot(Enums.BoardZone.OPEN_SPACE))
-		board._show_toast("EVENT: " + event_data.display_name,
-			board.open_rect.position + Vector2(100, 60), Color(1, 0.85, 0.5))
+		# Popup langsung berisi tombol pilihan (tidak jadi kartu dulu).
+		var hud2: HUD = board.get_node_or_null("HUD")
+		if hud2 != null:
+			hud2.show_event_popup(event_id)
+			board._show_toast("EVENT: " + event_data.display_name,
+				board.open_rect.position + Vector2(100, 60), Color(1, 0.85, 0.5))
+		else:
+			board.spawn_card_at(event_id, board.random_free_spot(Enums.BoardZone.OPEN_SPACE))
 	else:
-		apply_event(board, event_id)
+		# Popup info + tombol OK; efek diterapkan saat OK ditekan.
+		var hud: HUD = board.get_node_or_null("HUD")
+		if hud != null:
+			hud.show_event_popup(event_id)
+		else:
+			apply_event(board, event_id)
+
+# Ringkasan efek untuk popup (dihrtung dengan severity saat ini).
+func event_summary(event_id: String) -> String:
+	var event_data := CardDB.get_card(event_id) as EventCardData
+	if event_data == null:
+		return ""
+	var severity: float = 1.0 + 0.015 * GameState.day
+	match event_data.effect_type:
+		Enums.EventEffect.DAMAGE_HULL:
+			return "Hull -%d" % int(event_data.effect_value * severity)
+		Enums.EventEffect.DAMAGE_O2:
+			return "O2 -%d" % int(event_data.effect_value * severity)
+		Enums.EventEffect.STEAL_RESOURCE:
+			return "Some resources stolen!"
+		Enums.EventEffect.POWER_DEBUFF:
+			return "Power -50% for %d days" % event_data.duration_days
+		Enums.EventEffect.BUFF_LOOT:
+			return "Meteorite x%d!" % int(event_data.effect_value)
+	return ""
 
 func apply_event(board: Board, event_id: String, choice_index := -1) -> void:
 	var event_data := CardDB.get_card(event_id) as EventCardData
@@ -77,7 +107,7 @@ func apply_event(board: Board, event_id: String, choice_index := -1) -> void:
 			_steal_resource(board)
 		Enums.EventEffect.POWER_DEBUFF:
 			GameState.active_effects["power_debuff"] = event_data.duration_days
-			board._show_toast("EVENT: %s — Power debuff %d hari" % [event_data.display_name, event_data.duration_days],
+			board._show_toast("EVENT: %s — Power debuff %d days" % [event_data.display_name, event_data.duration_days],
 				board.ship_rect.position + Vector2(200, 300), Color(1, 0.8, 0.5))
 		Enums.EventEffect.BUFF_LOOT:
 			for i in int(event_data.effect_value):
@@ -102,7 +132,7 @@ func _steal_resource(board: Board) -> void:
 		return
 	var victim: Card = stacks[randi() % stacks.size()]
 	var stolen: int = maxi(1, int(round(victim.stack_count * 0.2)))
-	board._show_toast("EVENT: Bajak laut! -%d %s" % [stolen, victim.card_data.display_name],
+	board._show_toast("EVENT: Pirates! -%d %s" % [stolen, victim.card_data.display_name],
 		victim.global_position, Color(1, 0.5, 0.5))
 	victim.set_stack_count(victim.stack_count - stolen)
 	if victim.stack_count <= 0:

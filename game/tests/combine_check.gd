@@ -8,6 +8,7 @@ var _errors: Array[String] = []
 func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
+	DayCycle.enabled = false
 	_run_find_recipe_tests()
 	await _run_combine_flow_tests()
 	await _run_space_salvage_tests()
@@ -38,8 +39,10 @@ func _expect_recipe(card_a: Card, card_b: Card, expected: String, label: String)
 
 func _run_find_recipe_tests() -> void:
 	# Resep dasar PDF (Combining Recipe doc): 2-input, urutan bebas.
+	_expect_recipe(_make_card("item_water", 1), _make_card("item_ice_chunk", 1),
+		"recipe_make_oxygen_tank", "water+ice")
 	_expect_recipe(_make_card("item_water", 1), _make_card("item_water", 1),
-		"recipe_make_oxygen_tank", "water+water")
+		"null", "water+water (stack saja, bukan craft)")
 	_expect_recipe(_make_card("item_water", 1), _make_card("item_space_rock", 1),
 		"recipe_make_dirt", "water+rock")
 	_expect_recipe(_make_card("item_space_rock", 1), _make_card("item_water", 1),
@@ -54,8 +57,8 @@ func _run_find_recipe_tests() -> void:
 		"recipe_build_furnace", "rock2+iron")
 	_expect_recipe(_make_card("item_iron", 2), _make_card("item_component", 1),
 		"recipe_make_excavation_tools", "iron2+component (subset tetap excavation)")
-	_expect_recipe(_make_card("item_water", 1), _make_card("item_component", 2),
-		"recipe_portable_o2_tank", "water+component2 (EVA darurat)")
+	_expect_recipe(_make_card("item_iron", 2), _make_card("item_scrap_metal", 1),
+		"recipe_charge_energy_cell", "iron2+scrap (cas energy cell)")
 	_expect_recipe(_make_card("item_water", 1), _make_card("item_mushroom", 1),
 		"recipe_greenroom_grow_from_mushroom", "water+mushroom (gate dicek terpisah)")
 	# Qty kurang / tidak cocok → null.
@@ -106,17 +109,20 @@ func _run_combine_flow_tests() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	# A. water di-drop ke water → Oxygen Tank baru spawn, water berkurang 2.
-	# (board awal: water total 7 — x2, x1, x4.)
-	var waters := _find_two_on_board(board, "item_water")
+	# A. water di-drop ke ice chunk → Oxygen Tank baru spawn.
+	# (board awal: water total 7, ice total 1.)
+	var ice := _find_on_board(board, "item_ice_chunk")
+	var water0 := _find_on_board(board, "item_water")
 	var tank_before: int = _count_on_board(board, "item_oxygen_tank")
-	board._on_card_dropped(waters[0], waters[1].global_position + waters[1].size * 0.5)
+	board._on_card_dropped(water0, ice.global_position + ice.size * 0.5)
 	await get_tree().process_frame
 	if _count_on_board(board, "item_oxygen_tank") != tank_before + 1:
 		_fail("flow A: oxygen tank tidak bertambah (sebelum %d, sesudah %d)" \
 			% [tank_before, _count_on_board(board, "item_oxygen_tank")])
-	if _count_on_board(board, "item_water") != 5:
-		_fail("flow A: water seharusnya 5 (7-2), sekarang %d" % _count_on_board(board, "item_water"))
+	if _count_on_board(board, "item_water") != 6:
+		_fail("flow A: water seharusnya 6 (7-1), sekarang %d" % _count_on_board(board, "item_water"))
+	if _count_on_board(board, "item_ice_chunk") != 0:
+		_fail("flow A: ice seharusnya habis, sekarang %d" % _count_on_board(board, "item_ice_chunk"))
 
 	# B. iron di-drop ke component → Excavation Tools, iron-1 + component habis.
 	# (board awal: iron total 4, component 0 → spawn 1 buat test.)
@@ -136,7 +142,7 @@ func _run_combine_flow_tests() -> void:
 		_fail("flow B: component seharusnya habis, sekarang %d" % _count_on_board(board, "item_component"))
 
 	# C. water di-drop ke space rock → Dirt (rantai: Dirt+Water=Fertile Dirt).
-	# (board: rock total 5, water sisa 5 setelah flow A.)
+	# (board: rock total 5, water sisa 6 setelah flow A.)
 	var dirt_before: int = _count_on_board(board, "item_dirt")
 	var water := _find_on_board(board, "item_water")
 	var rock := _find_on_board(board, "item_space_rock")
@@ -145,8 +151,8 @@ func _run_combine_flow_tests() -> void:
 	if _count_on_board(board, "item_dirt") != dirt_before + 1:
 		_fail("flow C: dirt tidak bertambah (sebelum %d, sesudah %d)" \
 			% [dirt_before, _count_on_board(board, "item_dirt")])
-	if _count_on_board(board, "item_water") != 4:
-		_fail("flow C: water seharusnya 4 (5-1), sekarang %d" % _count_on_board(board, "item_water"))
+	if _count_on_board(board, "item_water") != 5:
+		_fail("flow C: water seharusnya 5 (6-1), sekarang %d" % _count_on_board(board, "item_water"))
 	if _count_on_board(board, "item_space_rock") != 4:
 		_fail("flow C: space rock seharusnya 4 (5-1), sekarang %d" % _count_on_board(board, "item_space_rock"))
 # --- Tes fitur baru: combine ke Structure, syarat Building/Worker, & 3-input pool ---

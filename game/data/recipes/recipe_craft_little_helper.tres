@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_craft_little_helper"
-display_name = "Rakit Little Helper"
+display_name = "Craft Little Helper"
 inputs = Array[Dictionary]([{"item_id": "item_energy_cell", "qty": 1}, {"item_id": "item_space_rock", "qty": 1}, {"item_id": "item_iron", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1

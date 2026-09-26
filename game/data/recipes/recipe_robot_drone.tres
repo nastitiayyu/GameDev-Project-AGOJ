@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_robot_drone"
-display_name = "Rakit Robot Drone"
+display_name = "Craft Robot Drone"
 inputs = Array[Dictionary]([{"item_id": "item_circuit_board", "qty": 3}, {"item_id": "item_metal_ingot", "qty": 2}])
 required_building_id = ""
 required_unit_role = -1

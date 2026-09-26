@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_oxygen_canister"
-display_name = "Isi Oksigen"
+display_name = "Fill Oxygen Canister"
 inputs = Array[Dictionary]([{"item_id": "item_water", "qty": 1}])
 required_building_id = "building_oxygen_generator"
 required_unit_role = -1

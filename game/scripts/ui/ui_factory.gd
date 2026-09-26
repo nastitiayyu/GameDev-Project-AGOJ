@@ -29,3 +29,21 @@ static func button(text: String, size: Vector2) -> Button:
 	b.text = text
 	b.size = size
 	return b
+
+const VIGNETTE_SHADER := "res://shaders/vignette_grain.gdshader"
+
+# Overlay vignette + grain full-rect. Kembalikan node-nya (atau null).
+static func vignette(parent: Control, size: Vector2, z := 400) -> ColorRect:
+	if not ResourceLoader.exists(VIGNETTE_SHADER):
+		return null
+	var overlay := ColorRect.new()
+	overlay.color = Color(1, 1, 1, 1)
+	overlay.position = Vector2.ZERO
+	overlay.size = size
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.z_index = z
+	var mat := ShaderMaterial.new()
+	mat.shader = load(VIGNETTE_SHADER)
+	overlay.material = mat
+	parent.add_child(overlay)
+	return overlay

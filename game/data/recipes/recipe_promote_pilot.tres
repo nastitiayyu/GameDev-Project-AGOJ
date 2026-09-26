@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_promote_pilot"
-display_name = "Latih Pilot"
+display_name = "Train Pilot"
 inputs = Array[Dictionary]([{"item_id": "unit_astronaut", "qty": 1}, {"item_id": "item_fuel_cell", "qty": 2}])
 required_building_id = "building_workshop"
 required_unit_role = -1

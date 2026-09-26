@@ -9,5 +9,5 @@ display_name = "Tech Pack"
 base_cost = 30
 card_count = 3
 rep_required = 20
-drop_table = Array[Dictionary]([{"card_id": "item_iron", "weight": 100}, {"card_id": "item_iron_ore", "weight": 80}, {"card_id": "item_space_rock", "weight": 80}, {"card_id": "item_energy_cell", "weight": 60}, {"card_id": "item_component", "weight": 60}, {"card_id": "tool_excavation_tools", "weight": 20}, {"card_id": "item_star_system_map", "weight": 15}])
+drop_table = Array[Dictionary]([{"card_id": "item_iron", "weight": 100}, {"card_id": "item_iron_ore", "weight": 80}, {"card_id": "item_space_rock", "weight": 80}, {"card_id": "item_energy_cell", "weight": 60}, {"card_id": "item_component", "weight": 75}, {"card_id": "tool_excavation_tools", "weight": 20}])
 resource_cost = Array[Dictionary]([{"item_id": "item_scrap_metal", "qty": 2}, {"item_id": "item_space_ore", "qty": 2}])

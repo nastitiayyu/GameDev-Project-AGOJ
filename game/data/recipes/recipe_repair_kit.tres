@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_repair_kit"
-display_name = "Rakit Repair Kit"
-inputs = Array[Dictionary]([{"item_id": "item_scrap_metal", "qty": 2}, {"item_id": "tool_welding_torch", "qty": 1}])
+display_name = "Craft Repair Kit"
+inputs = Array[Dictionary]([{"item_id": "item_scrap_metal", "qty": 2}, {"item_id": "item_iron", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1
 output_id = "tool_repair_kit"

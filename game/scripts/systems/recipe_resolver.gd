@@ -58,18 +58,63 @@ static func check_blocked(recipe: CraftRecipe, board: Board) -> String:
 	if recipe.required_building_id != "" and not board.has_building(recipe.required_building_id):
 		var building: CardData = CardDB.get_card(recipe.required_building_id)
 		var name: String = building.display_name if building != null else recipe.required_building_id
-		return "Butuh building: " + name
+		return "Needs building: " + name
 	if not recipe.required_any_structure_ids.is_empty() \
 			and not _has_any(board, recipe.required_any_structure_ids):
-		return "Butuh: " + _names_join(recipe.required_any_structure_ids)
+		return "Needs: " + _names_join(recipe.required_any_structure_ids)
 	if recipe.required_unit_role != Enums.UnitRole.ANY and not board.has_unit_role(recipe.required_unit_role):
-		return "Butuh Unit role: " + role_name(recipe.required_unit_role)
+		return "Needs unit role: " + role_name(recipe.required_unit_role)
 	if not recipe.required_any_worker_ids.is_empty() \
 			and not _has_any(board, recipe.required_any_worker_ids):
-		return "Butuh: " + _names_join(recipe.required_any_worker_ids)
+		return "Needs: " + _names_join(recipe.required_any_worker_ids)
 	return ""
 
-static func execute(recipe: CraftRecipe, card_a: Card, card_b: Card, board: Board, drop_position: Vector2) -> void:
+# Apakah resep bisa dikerjakan SEKARANG hanya dengan kartu yang ada di board:
+# semua input tersedia sesuai qty, syarat kehadiran (building/structure/worker/
+# role) terpenuhi, dan struktur target (mis. Furnace) ada bila resep butuh itu.
+# Dipakai UI untuk menyorot (highlight) resep yang siap dibuat.
+static func can_make_now(recipe: CraftRecipe, board: Board) -> bool:
+	return recipe != null and board != null and unmet_reason(recipe, board) == ""
+
+# Alasan resep belum bisa dibuat sekarang ("" = bisa). Urutan cek:
+# syarat kehadiran → struktur target → input yang kurang. Dipakai UI untuk
+# menampilkan kenapa sebuah resep belum tersorot hijau.
+static func unmet_reason(recipe: CraftRecipe, board: Board) -> String:
+	if recipe == null or board == null:
+		return "Board not ready"
+	var blocked := check_blocked(recipe, board)
+	if blocked != "":
+		return blocked
+	if not recipe.structure_target_ids.is_empty() \
+			and not _has_any(board, recipe.structure_target_ids):
+		return "Needs: " + _names_join(recipe.structure_target_ids)
+	var missing := missing_inputs(recipe, board)
+	if not missing.is_empty():
+		var parts: Array[String] = []
+		for m in missing:
+			parts.append("%s x%d" % [_name_of(String(m.get("item_id", ""))), int(m.get("qty", 0))])
+		return "Missing: " + ", ".join(parts)
+	return ""
+
+# Daftar input yang masih kurang: [{item_id, qty}], qty = jumlah yang belum ada.
+# Kebutuhan digabung per item id (mis. Water x1 + Water x1 → butuh Water x2).
+static func missing_inputs(recipe: CraftRecipe, board: Board) -> Array[Dictionary]:
+	var missing: Array[Dictionary] = []
+	if recipe == null or board == null:
+		return missing
+	var need: Dictionary = {}
+	for req in recipe.inputs:
+		var item_id: String = String(req.get("item_id", ""))
+		if item_id == "":
+			continue
+		need[item_id] = int(need.get(item_id, 0)) + int(req.get("qty", 1))
+	for item_id: String in need:
+		var short: int = int(need[item_id]) - board.count_item(item_id)
+		if short > 0:
+			missing.append({"item_id": item_id, "qty": short})
+	return missing
+
+static func execute(recipe: CraftRecipe, card_a: Card, card_b: Card, board: Board, drop_position: Vector2) -> Card:
 	var candidates: Array[Card] = _gather_candidates(recipe, card_a, card_b, board)
 
 	# Tentukan titik spawn SEBELUM konsumsi (anchor bisa saja habis/queue_free).
@@ -97,7 +142,7 @@ static func execute(recipe: CraftRecipe, card_a: Card, card_b: Card, board: Boar
 			if source.stack_count <= 0:
 				source.queue_free()
 
-	board.spawn_card_at(recipe.output_id, spawn_position, recipe.output_qty)
+	return board.spawn_card_at(recipe.output_id, spawn_position, recipe.output_qty)
 
 static func role_name(role: int) -> String:
 	for key: String in Enums.UnitRole.keys():
@@ -125,11 +170,14 @@ static func _has_any(board: Board, ids: Array) -> bool:
 			return true
 	return false
 
+static func _name_of(id: String) -> String:
+	var data: CardData = CardDB.get_card(id)
+	return data.display_name if data != null else id
+
 static func _names_join(ids: Array) -> String:
 	var names: Array[String] = []
 	for id in ids:
-		var data: CardData = CardDB.get_card(String(id))
-		names.append(data.display_name if data != null else String(id))
+		names.append(_name_of(String(id)))
 	return " / ".join(names)
 
 # Kumpulkan kandidat kartu untuk resep 3+ input: kartu yg lagi di-drag/drop

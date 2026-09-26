@@ -8,6 +8,7 @@ var _board: Board
 func _ready() -> void:
 	await get_tree().process_frame
 	Events.enabled = false
+	DayCycle.enabled = false
 	_board = MAIN_SCENE.instantiate()
 	add_child(_board)
 	await get_tree().process_frame
@@ -76,13 +77,15 @@ func _run_gameplay_tests() -> void:
 	if _count("item_water") != 1:
 		_fail("B: water harus 1 (3-2), sekarang %d" % _count("item_water"))
 
-	# C. A10: jual water di Trade Post → +3 cr (common)
+	# C. Market: jual 1 water → +3 cr (common, harga per-unit)
 	var water := _find("item_water")
-	var trade_post := _find("building_trade_post")
-	_drop(water, trade_post)
+	var water_before := _count("item_water")
+	Economy.sell_units(_board, water, 1)
 	await get_tree().process_frame
 	if GameState.credits != 53:
 		_fail("C: credits harus 53 (50+3), sekarang %d" % GameState.credits)
+	if _count("item_water") != water_before - 1:
+		_fail("C: water harus berkurang 1, sekarang %d" % _count("item_water"))
 
 	# D. A7 produksi real-time: hydro + worker + bahan → progress penuh → 1 veggie (1 water)
 	var a1 := _find("unit_astronaut")
@@ -94,8 +97,8 @@ func _run_gameplay_tests() -> void:
 	await get_tree().process_frame
 	if _count("item_hydro_veggie") != 1:
 		_fail("D: hydro veggie harus 1 setelah produksi, sekarang %d" % _count("item_hydro_veggie"))
-	if _count("item_water") != 0:
-		_fail("D: water harus habis dipakai produksi, sekarang %d" % _count("item_water"))
+	if _count("item_water") != 2:
+		_fail("D: water seharusnya 2 (3-1 produksi), sekarang %d" % _count("item_water"))
 	DayCycle.end_day()
 	await get_tree().process_frame
 	if GameState.food != 100.0:
@@ -131,19 +134,32 @@ func _run_gameplay_tests() -> void:
 	if a2.unit_state != Enums.UnitState.IDLE:
 		_fail("E: unit harus kembali IDLE setelah terkirim")
 
-	# F. A1.2: tether — 2 unit boleh, ke-3 ditolak
-	var engineer := _find("unit_engineer")
-	_board._on_card_dropped(a2, Vector2(1800, 700))
-	_board._on_card_dropped(engineer, Vector2(1800, 900))
+	# F. A1.2 (revisi): unit boleh kerja di Zona Angkasa TANPA tether —
+	#    cukup memakai O2 dari stok kapal. Oxygen Tank consumable
+	#    yang menambah 25 O2 saat dipakai pada unit.
+	var spacer := _board.spawn_card_at("unit_astronaut", Vector2(1750, 760))
+	var tank_owner := _board.spawn_card_at("unit_astronaut", Vector2(1750, 300))
 	await get_tree().process_frame
-	if not a2.is_tethered:
-		_fail("F: a2 harus tethered di angkasa")
-	if not engineer.is_tethered:
-		_fail("F: engineer harus tethered di angkasa")
-	a1.global_position = Vector2(1750, 500)
-	if _board.validate_drop(a1):
-		_fail("F: slot tether penuh (2) harus menolak unit ke-3")
-	a1.global_position = hydro.global_position + Vector2(8, 30)
+	if _board.get_zone(Vector2(1780, 790)) != Enums.BoardZone.OPEN_SPACE:
+		_fail("F: koordinat tes harus di Zona Angkasa")
+	if not _board.validate_drop(spacer):
+		_fail("F: unit harus boleh masuk Zona Angkasa tanpa tether/tank")
+	_board._on_card_dropped(spacer, spacer.global_position + spacer.size * 0.5)
+	await get_tree().process_frame
+	if spacer.is_queued_for_deletion():
+		_fail("F: unit tidak boleh hilang di Zona Angkasa tanpa tether/tank")
+	GameState.oxygen = 40.0
+	var tank := _board.spawn_card_at("item_oxygen_tank", Vector2(1750, 500))
+	await get_tree().process_frame
+	if tank == null:
+		_fail("F: oxygen tank tidak bisa di-spawn")
+	else:
+		_drop(tank, tank_owner)
+		await get_tree().process_frame
+		if GameState.oxygen != 65.0:
+			_fail("F: oxygen tank harus +25 O2 (40 -> 65), sekarang %.0f" % GameState.oxygen)
+		if _find("item_oxygen_tank") != null:
+			_fail("F: oxygen tank harus terkonsumsi setelah dipakai")
 
 	# G. A9: PLAYER_CHOICE — Trade → Alien Pack gratis terbuka
 	var cards_before := _count_all()

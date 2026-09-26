@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/core/craft_recipe.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "recipe_charge_energy_cell"
+display_name = "Charge Energy Cell"
+inputs = Array[Dictionary]([{"item_id": "item_iron", "qty": 2}, {"item_id": "item_scrap_metal", "qty": 1}])
+required_building_id = ""
+required_unit_role = -1
+output_id = "item_energy_cell"
+output_qty = 1
+duration_days = 0

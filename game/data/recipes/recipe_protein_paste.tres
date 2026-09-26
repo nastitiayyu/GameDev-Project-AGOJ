@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_script")
 id = "recipe_protein_paste"
-display_name = "Olah Protein Paste"
-inputs = Array[Dictionary]([{"item_id": "item_alien_extract", "qty": 1}, {"item_id": "tool_processor", "qty": 1}])
+display_name = "Process Protein Paste"
+inputs = Array[Dictionary]([{"item_id": "item_alien_extract", "qty": 1}, {"item_id": "item_mushroom", "qty": 1}])
 required_building_id = ""
 required_unit_role = -1
 output_id = "item_protein_paste"
